@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>QCII Preset Panel — MCC7500 Style (Read-only)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <script src="https://unpkg.com/tone"></script>
+  <style>
+    :root{ --bg:#121417; --panel:#1a1f24; --tile:#20262c; --tile-border:#2c333b;
+      --tile-active:#2b6f2f; --tile-text:#dce3ea; --muted:#8a98a8; --accent:#4aa3ff; --danger:#c54848; --modal-bg: rgba(0,0,0,.6); }
+    html,body{height:100%}
+    body{ margin:0; background:var(--bg); color:#e7eef5; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      display:flex; flex-direction:column; align-items:center; gap:14px; padding:18px; }
+
+    .menubar{ width:100%; max-width:1240px; background:var(--panel); border:1px solid #222a31; border-radius:10px; padding:6px 10px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow: 0 6px 18px rgba(0,0,0,.35) inset, 0 1px 0 rgba(255,255,255,.04); font-size:14px; }
+    .menu-left{ display:flex; align-items:center; gap:10px; color:#cfd8e3; }
+    .menu-left .brand{ font-weight:700; letter-spacing:.3px; }
+    .menu-left .btnbar button{ background:#0f1316; border:1px solid #2a323a; color:#cfd8e3; border-radius:6px; padding:4px 8px; margin-right:6px; cursor:pointer; }
+    .clock{ font-variant-numeric: tabular-nums; font-weight:700; letter-spacing:.5px; }
+
+    .topbar{ width:100%; max-width:1240px; background:var(--panel); border:1px solid #222a31; border-radius:14px; padding:12px 14px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow: 0 6px 18px rgba(0,0,0,.35) inset, 0 1px 0 rgba(255,255,255,.04); }
+    .title{ display:flex; align-items:center; gap:10px; letter-spacing:.4px; font-weight:600; }
+    .title .pill{ font-size:12px; color:#cfd8e3; background:#0f1316; border:1px solid #2a323a; padding:3px 8px; border-radius:999px; }
+
+    .controls{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .control{ background:#0f1316; border:1px solid #2a323a; color:#d7e3ef; border-radius:10px; padding:8px 12px; display:flex; gap:8px; align-items:center; }
+
+    .btn{ border:none; cursor:pointer; border-radius:10px; font-weight:600; padding:9px 12px; transition:.15s transform ease;
+      background:#11161b; color:#e7eef5; border:1px solid #2a323a; }
+    .btn:hover{ transform:translateY(-1px) } .btn:active{ transform:translateY(0) }
+    .btn.primary{ background:#0f1520; border-color:#274562; color:#cfe6ff }
+    .btn.danger{ background:#1e0f11; border-color:#4a1f23; color:#ffb9b9 }
+    .btn.ghost{ background:#0f1316; color:#cfd8e3; }
+    .btn.toggle.on{ outline:2px solid #274562; }
+
+    #audioGate{ display:none; margin:8px 0; padding:10px 12px; border:1px solid #4a1f23; border-radius:10px; background:#1e0f11; color:#ffb9b9; font-weight:600; cursor:pointer; }
+
+    .workspace{ width:100%; max-width:1240px; display:grid; grid-template-columns: 1fr 320px; gap:14px; }
+    .grid-wrap{ background:var(--panel); border:1px solid #222a31; border-radius:14px; padding:16px; box-shadow: 0 6px 18px rgba(0,0,0,.35) inset, 0 1px 0 rgba(255,255,255,.04);
+      display:flex; flex-direction:column; gap:12px; }
+    .bank-tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+    .tab{ padding:8px 12px; border-radius:999px; border:1px solid #2a323a; background:#0f1316; color:#c9d5e3; cursor:pointer; font-weight:600; font-size:13px; }
+    .tab.active{ background:#162438; color:#e4f2ff; border-color:#274562 }
+
+    .grid{ display:grid; gap:10px; grid-template-columns: repeat(5, minmax(160px, 1fr)); }
+    @media (max-width: 1100px){ .grid{ grid-template-columns: repeat(3, minmax(160px,1fr)); } }
+    @media (max-width: 820px){ .workspace{ grid-template-columns: 1fr; } }
+
+    .tile{ background:var(--tile); border:2px solid var(--tile-border); border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;
+      position:relative; overflow:hidden; min-height:54px; }
+    .tile .left{ display:flex; flex-direction:column; line-height:1.1; }
+    .tile .label{ font-weight:800; color:var(--tile-text) }
+    .tile .meta{ font-size:12px; color:#8da1b5 }
+    .tile .play{ padding:8px 10px; }
+    .tile.active{ background:linear-gradient(180deg, rgba(68,148,71,.45), rgba(34,68,36,.25)), var(--tile); border-color:#3a7c3d; box-shadow:0 0 18px rgba(52,196,58,.25) inset; }
+
+    .tile.selectable{ cursor:pointer; }
+    .tile.selected{ border-color:#3a7c3d; box-shadow:0 0 0 2px rgba(52,196,58,.25) inset; }
+    .order-badge{ position:absolute; top:6px; left:6px; background:#1a2d1c; border:1px solid #3a7c3d; color:#cfe6cf; font-size:11px; padding:1px 6px; border-radius:999px; display:none; }
+    .tile.selected .order-badge{ display:block; }
+
+    .sidebar{ background:var(--panel); border:1px solid #222a31; border-radius:14px; padding:16px; box-shadow: 0 6px 18px rgba(0,0,0,.35) inset, 0 1px 0 rgba(255,255,255,.04);
+      display:flex; flex-direction:column; gap:12px; }
+    .sidecard{ background:#0f1316; border:1px solid #2a323a; border-radius:10px; padding:12px; }
+    .sidecard h4{ margin:0 0 8px 0; font-size:13px; color:#cfd8e3; }
+    .paging-box{ min-height:120px; border:1px dashed #2a323a; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#7e8c9c; text-align:center; padding:8px; }
+
+    .footer{ width:100%; max-width:1240px; display:flex; justify-content:flex-end; color:#8fa2b6; font-size:12px; }
+
+    .toast{ position:fixed; right:14px; bottom:14px; background:#0f1316; color:#cfe6ff; border:1px solid #274562; padding:10px 12px; border-radius:10px; display:none; }
+
+    .wav-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.wav-buttons button {
+  padding: 6px 5px;
+  font-size: 12px;
+  background-color: #555;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  height: 50px;
+}
+.wav-buttons button:hover {
+  background-color: #777;
+}
+  </style>
+</head>
+<body>
+
+  <!-- Menu -->
+  <div class="menubar">
+    <div class="menu-left">
+      <span class="brand">Quad County Communications</span>
+      <div class="btnbar">
+        <button class="ghost" id="btnImport">Import JSON</button>
+        <button class="ghost" id="btnExport">Download JSON</button>
+        <input type="file" id="fileInput" accept="application/json" style="display:none" />
+      </div>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+
+  <!-- Top Controls -->
+  <div class="topbar">
+    <div class="title">
+      <span>P25 TwoTone</span>
+      <span class="pill">Read-only</span>
+    </div>
+    <div class="controls">
+      <div class="control">
+        <span>Output</span>
+        <input id="gain" type="range" min="0" max="1" step="0.01" value="0.8" />
+      </div>
+      <div class="control">
+        <span>Gap</span>
+        <input id="gapMs" type="range" min="0" max="3000" step="50" value="1150" />
+        <span id="gapLabel" style="min-width:60px;text-align:right;">1.15s</span>
+      </div>
+      <label class="control" style="gap:8px;font-size:13px;color:#b7c4d3;">
+        <input id="repeat" type="checkbox" />
+        <span>Repeat</span>
+      </label>
+      <button class="btn ghost" id="testBeep">Test Beep</button>
+      <button class="btn toggle" id="selectModeBtn" title="Select multiple tones to queue">Select Tones</button>
+      <button class="btn primary" id="playQueueBtn" title="Play selected tones in order">Play Selected</button>
+      <button class="btn ghost" id="clearQueueBtn" title="Clear selection">Clear</button>
+      <button class="btn danger" id="stopAll">Stop All</button>
+    </div>
+  </div>
+
+  <!-- Audio gate banner -->
+  <div id="audioGate">Audio is blocked by the browser. Click here to enable.</div>
+
+  <!-- Main Workspace -->
+  <div class="workspace">
+    <div class="grid-wrap">
+      <div class="bank-tabs" id="bankTabs"></div>
+      <div class="grid" id="tiles"></div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidecard">
+        <h4>Queue</h4>
+        <div class="paging-box" id="queuePreview">No tones selected. Click “Select Tones”, then click tiles to add them here.</div>
+      </div>
+      <div class="sidecard">
+        <h4>Hotkeys</h4>
+        <div style="color:#9ab; font-size:12px">
+          1–9: Tiles in current bank<br/>
+          Esc: Stop All<br/>
+          Per-tile <code>hotkey</code> from JSON (letters/numbers)
+        </div>
+         <!-- RIGHT-SIDE FIXED AUDIO BUTTONS -->
+         <div class="wav-buttons">
+           <button class="side-btn" onclick="playAnnounce('BOX.wav')">BOX</button>
+           <button class="side-btn" onclick="playAnnounce('EVAC.wav')">EVAC</button>
+           <button class="side-btn" onclick="playAnnounce('FIRE.wav')">FIRE</button>
+           <button class="side-btn" onclick="playAnnounce('EMS.wav')">EMS</button>
+           <button class="side-btn" onclick="playAnnounce('Mayday.wav')">MAYDAY</button>
+           <button class="side-btn" onclick="playAnnounce('RESCUE CANCEL.wav')">RESCUE CANCEL</button>
+         </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer">
+    <div>All tones fixed at 1.0s / 1.0s. Load presets via JSON and use <strong>Select Tones → Play Selected</strong> for sequences.</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ===== Fixed durations & queue gap ===== */
+const FIXED_A_DUR = 1.0;
+const FIXED_B_DUR = 1.0;
+let   QUEUE_GAP_MS = 1150;
+
+/* ===== Announcement audio (fixed right buttons) ===== */
+let announceAudio = null;
+function playAnnounce(filename){
+  if(!announceAudio){ announceAudio = new Audio(); }
+  const vol = parseFloat(document.getElementById('gain').value) || 1.0;
+  announceAudio.volume = Math.max(0, Math.min(1, vol));
+  announceAudio.src = encodeURI(filename); // handles spaces like "RESCUE CANCEL.wav"
+  announceAudio.currentTime = 0;
+  announceAudio.play().catch(err => console.error('Announcement play failed:', err));
+}
+
+/* ===== Audio core (Tone.js) ===== */
+let masterGain = null;
+let activeOscs = new Set();
+const envConfig = { attack:0.01, decay:0.02, sustain:1.0, release:0.03 };
+
+async function ensureAudio(){
+  await Tone.start();
+  if(!masterGain){
+    masterGain = new Tone.Volume(0).toDestination();
+    setGain(document.getElementById('gain').value);
+  }
+  await Tone.getContext().resume();
+  updateAudioGate();
+}
+function setGain(val){
+  const f = Math.max(0.0001, Math.min(1, parseFloat(val ?? 0.8)));
+  const db = Math.log10(f) * 20;
+  if(masterGain) masterGain.volume.value = db;
+  if(announceAudio) announceAudio.volume = Math.max(0, Math.min(1, parseFloat(val)||1));
+}
+
+/* Audio gate helpers */
+function updateAudioGate() {
+  const gate = document.getElementById('audioGate');
+  const state = Tone.getContext().state;
+  gate.style.display = (state === 'suspended') ? 'block' : 'none';
+}
+async function unlockAudio() {
+  try { await Tone.start(); await Tone.getContext().resume(); }
+  catch (e) { console.error('Audio unlock failed:', e); }
+  finally { updateAudioGate(); }
+}
+
+/* ===== App state / presets loading ===== */
+let BANKS = [];
+let currentBankIdx = 0;
+
+/* Lookup for married partners */
+let LABEL_INDEX = new Map();  // "Bank::Label" -> {bankIdx, tileIdx}
+function buildLabelIndex(){
+  LABEL_INDEX = new Map();
+  BANKS.forEach((bank, bIdx) => {
+    (bank.tiles || []).forEach((t, tIdx) => {
+      const key = `${bank.name}::${t.label}`;
+      LABEL_INDEX.set(key, { bankIdx: bIdx, tileIdx: tIdx });
+    });
+  });
+}
+function resolveMarriedPartner(srcBankIdx, srcTileIdx){
+  const t = BANKS?.[srcBankIdx]?.tiles?.[srcTileIdx];
+  if(!t || !t.marryTo) return null;
+  const key = t.marryTo.includes('::') ? t.marryTo : `${BANKS[srcBankIdx].name}::${t.marryTo}`;
+  return LABEL_INDEX.get(key) || null;
+}
+
+/* Prefer Flask API if present; else presets.json */
+async function fetchPresets(){
+  const api = await fetch('/api/presets', {cache:'no-store'}).catch(()=>null);
+  if(api && api.ok){
+    const data = await api.json();
+    BANKS = data.banks || [];
+    buildLabelIndex();
+    return;
+  }
+  const file = await fetch('presets.json', {cache:'no-store'});
+  if(!file.ok) throw new Error('Failed to load presets.json');
+  const data = await file.json();
+  BANKS = data.banks || [];
+  buildLabelIndex();
+}
+
+/* ===== Helpers ===== */
+function toast(msg, ok=true){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = ok ? '#274562' : '#4a1f23';
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display = 'none'; }, 2200);
+}
+function parseHz(val){ const n = parseFloat(val); return Number.isFinite(n) ? n : NaN; }
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ===== Playback ===== */
+function playPresetAsync(preset, tileEl){
+  return new Promise(async (resolve)=>{
+    await ensureAudio();
+
+    const aHz = parseHz(preset.a);
+    const bHz = parseHz(preset.b);
+    if (!Number.isFinite(aHz) || !Number.isFinite(bHz)) {
+      console.warn('Invalid A/B frequencies:', preset);
+      alert(`This tile has invalid A/B values.\nA: ${preset.a}\nB: ${preset.b}`);
+      if(tileEl) tileEl.classList.remove('active');
+      return resolve();
+    }
+
+    if(tileEl) tileEl.classList.add('active');
+
+    const env = new Tone.AmplitudeEnvelope(envConfig).connect(masterGain);
+    const osc = new Tone.Oscillator({ type:"sine", frequency: aHz }).connect(env);
+    activeOscs.add(osc);
+
+    const aDur = FIXED_A_DUR, bDur = FIXED_B_DUR, total = aDur + bDur;
+    const now = Tone.now();
+
+    osc.start(now);
+    env.triggerAttack(now);
+    osc.frequency.setValueAtTime(aHz, now);
+    if (bDur > 0){ osc.frequency.setValueAtTime(bHz, now + aDur); }
+    env.triggerRelease(now + total);
+    osc.stop(now + total + 0.05);
+
+    const endMs = (total + 0.08) * 1000;
+    setTimeout(()=>{
+      activeOscs.delete(osc);
+      if(tileEl) tileEl.classList.remove('active');
+      resolve();
+    }, endMs);
+  });
+}
+async function playPreset(preset, tileEl){
+  const repeat = document.getElementById('repeat').checked;
+  do { await playPresetAsync(preset, tileEl); } while(repeat && isQueuePlaying === false);
+}
+function stopAll(){
+  for(const osc of activeOscs){ try{ osc.stop(); }catch{} }
+  activeOscs.clear();
+  document.querySelectorAll('.tile.active').forEach(t=>t.classList.remove('active'));
+  isQueuePlaying = false;
+}
+
+/* ===== Banks/Tiles rendering (read-only) ===== */
+function renderBanks(){
+  const tabs = document.getElementById('bankTabs');
+  tabs.innerHTML = '';
+  BANKS.forEach((bank, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (idx===currentBankIdx ? ' active':'');
+    btn.textContent = bank.name;
+    btn.addEventListener('click', ()=>{
+      currentBankIdx = idx;
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      btn.classList.add('active');
+      renderTiles();
+    });
+    tabs.appendChild(btn);
+  });
+}
+
+/* ===== Select/Queue ===== */
+let selectionMode = false;
+let selectedQueue = []; // {bankIdx, tileIdx}
+let isQueuePlaying = false;
+
+function toggleSelectionMode(){
+  selectionMode = !selectionMode;
+  document.getElementById('selectModeBtn').classList.toggle('on', selectionMode);
+  renderTiles();
+}
+function queueIndex(bankIdx, tileIdx){
+  return selectedQueue.findIndex(q => q.bankIdx===bankIdx && q.tileIdx===tileIdx);
+}
+function addToQueue(bankIdx, tileIdx, insertAt = null){
+  if(queueIndex(bankIdx, tileIdx) >= 0) return;
+  const item = {bankIdx, tileIdx};
+  if(insertAt === null || insertAt < 0 || insertAt > selectedQueue.length){
+    selectedQueue.push(item);
+  } else {
+    selectedQueue.splice(insertAt, 0, item);
+  }
+  updateQueuePreview();
+}
+function removeFromQueue(bankIdx, tileIdx){
+  selectedQueue = selectedQueue.filter(q => !(q.bankIdx===bankIdx && q.tileIdx===tileIdx));
+  updateQueuePreview();
+}
+function clearQueue(){
+  selectedQueue = [];
+  updateQueuePreview();
+  renderTiles();
+}
+function updateQueuePreview(){
+  const el = document.getElementById('queuePreview');
+  if(selectedQueue.length === 0){
+    el.textContent = 'No tones selected. Click “Select Tones”, then click tiles to add them here.';
+    return;
+  }
+  const lines = selectedQueue.map((q, i)=>{
+    const t = BANKS[q.bankIdx].tiles[q.tileIdx];
+    return `${i+1}. ${t.label} (${t.a}→${t.b})`;
+  });
+  el.innerHTML = lines.join('<br/>');
+}
+function waitMs(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+async function playQueue(){
+  if(selectedQueue.length === 0) return;
+  isQueuePlaying = true;
+  const repeatBox = document.getElementById('repeat');
+  const prevRepeat = repeatBox.checked;
+  repeatBox.checked = false;
+  try{
+    for(let i=0; i<selectedQueue.length && isQueuePlaying; i++){
+      const q = selectedQueue[i];
+      const bank = BANKS[q.bankIdx];
+      if(!bank) continue;
+      const preset = bank.tiles[q.tileIdx];
+      if(!preset) continue;
+
+      if(currentBankIdx !== q.bankIdx){
+        currentBankIdx = q.bankIdx;
+        renderBanks(); renderTiles();
+      }
+      const grid = document.getElementById('tiles');
+      const tileEl = grid.children[q.tileIdx];
+      await playPresetAsync(preset, tileEl);
+
+      if(isQueuePlaying && i < selectedQueue.length - 1 && QUEUE_GAP_MS > 0){
+        await waitMs(QUEUE_GAP_MS);
+      }
+    }
+  } finally {
+    isQueuePlaying = false;
+    repeatBox.checked = prevRepeat;
+  }
+}
+
+function renderTiles(){
+  const grid = document.getElementById('tiles');
+  grid.innerHTML = '';
+  const bank = BANKS[currentBankIdx] || { tiles:[] };
+  bank.tiles.forEach((p, idx)=>{
+    const tile = document.createElement('div');
+    tile.className = 'tile' + (selectionMode ? ' selectable' : '');
+    const selIdx = queueIndex(currentBankIdx, idx);
+    if(selIdx >= 0) tile.classList.add('selected');
+
+    const marriedHtml = p.marryTo
+      ? '&middot; <em>married → ' + escapeHtml(p.marryTo) + '</em>'
+      : '';
+
+    const aText = Number.isFinite(parseFloat(p.a)) ? (+p.a).toFixed(1) : p.a;
+    const bText = Number.isFinite(parseFloat(p.b)) ? (+p.b).toFixed(1) : p.b;
+
+    tile.innerHTML = `
+      <div class="order-badge">${selIdx >= 0 ? (selIdx+1) : ''}</div>
+      <div class="left">
+        <div class="label">${escapeHtml(p.label)}</div>
+        <div class="meta">
+          ${aText} Hz → ${bText} Hz &ensp;(1.0s / 1.0s) ${marriedHtml}
+        </div>
+      </div>
+      <button class="btn primary play">Play</button>
+    `;
+
+    const toggleThis = ()=>{
+      const existingIdx = queueIndex(currentBankIdx, idx);
+      if(existingIdx >= 0){
+        removeFromQueue(currentBankIdx, idx);
+        renderTiles();
+        return;
+      }
+      const insertAt = selectedQueue.length;
+      addToQueue(currentBankIdx, idx, insertAt);
+      const mate = resolveMarriedPartner(currentBankIdx, idx);
+      if(mate && queueIndex(mate.bankIdx, mate.tileIdx) < 0){
+        const pos = selectedQueue.findIndex(q => q.bankIdx===currentBankIdx && q.tileIdx===idx);
+        const place = (pos >= 0 ? pos + 1 : insertAt + 1);
+        addToQueue(mate.bankIdx, mate.tileIdx, place);
+      }
+      renderTiles();
+    };
+
+    tile.addEventListener('click', ()=>{ if(selectionMode) { toggleThis(); } });
+    tile.querySelector('.play').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(selectionMode) { toggleThis(); } else { playPreset(p, tile); }
+    });
+
+    grid.appendChild(tile);
+  });
+}
+
+/* ===== Import/Export (read-only presets) ===== */
+function downloadJSON(filename, dataObj){
+  const blob = new Blob([JSON.stringify(dataObj, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+}
+function currentDataObject(){
+  return { banks: BANKS.map(b=>({ name: b.name, tiles: b.tiles.map(t=>({label: t.label, a: t.a, b: t.b, note: t.note, hotkey: t.hotkey, marryTo: t.marryTo})) })) };
+}
+
+/* ===== Buttons & init ===== */
+const fileInput = document.getElementById('fileInput');
+document.getElementById('btnImport').addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  try{
+    const text = await file.text();
+    const json = JSON.parse(text);
+    if(!json || !Array.isArray(json.banks)) throw new Error('Invalid presets.json format.');
+    BANKS = json.banks;
+    buildLabelIndex();
+    currentBankIdx = 0; selectedQueue = [];
+    renderBanks(); renderTiles(); updateQueuePreview();
+    toast('Imported JSON');
+  }catch(err){
+    alert('Import failed: ' + err.message);
+    console.error(err);
+  }finally{
+    fileInput.value = '';
+  }
+});
+document.getElementById('btnExport').addEventListener('click', ()=>downloadJSON('presets.json', currentDataObject()));
+
+document.getElementById('selectModeBtn').addEventListener('click', toggleSelectionMode);
+document.getElementById('playQueueBtn').addEventListener('click', playQueue);
+document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+document.getElementById('stopAll').addEventListener('click', stopAll);
+
+function startClock(){
+  const el = document.getElementById('clock');
+  const tick = ()=>{
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    el.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+  tick(); setInterval(tick, 1000);
+}
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  startClock();
+  updateAudioGate();
+
+  // Gap slider wiring (default 1150 ms)
+  const gapSlider = document.getElementById('gapMs');
+  const gapLabel  = document.getElementById('gapLabel');
+  gapSlider.value = 1150; // ensure default
+  const updateGapUI = () => {
+    QUEUE_GAP_MS = parseInt(gapSlider.value, 10) || 0;
+    gapLabel.textContent = (QUEUE_GAP_MS/1000).toFixed(2) + 's';
+  };
+  gapSlider.addEventListener('input', updateGapUI);
+  updateGapUI();
+
+  // Unlock audio
+  document.getElementById('audioGate').addEventListener('click', unlockAudio);
+  window.addEventListener('pointerdown', unlockAudio, { once:true });
+
+  // Test beep
+  document.getElementById('testBeep').addEventListener('click', async ()=>{
+    await unlockAudio();
+    const now = Tone.now();
+    const env = new Tone.AmplitudeEnvelope({ attack:0.01, decay:0.02, sustain:1, release:0.03 }).toDestination();
+    const osc = new Tone.Oscillator({ type:'sine', frequency: 1000 }).connect(env);
+    osc.start(now);
+    env.triggerAttack(now);
+    env.triggerRelease(now + 1.0);
+    osc.stop(now + 1.05);
+  });
+
+  try{
+    await fetchPresets();
+    renderBanks();
+    renderTiles();
+  }catch(e){
+    alert(e.message);
+    console.error(e);
+  }
+  document.getElementById('gain').addEventListener('input', (e)=>setGain(e.target.value));
+
+  // Hotkeys: 1–9 tiles; Esc stop; per-tile hotkeys (disabled during selection mode)
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){ stopAll(); return; }
+    if(selectionMode) return;
+    const bank = BANKS[currentBankIdx] || {tiles:[]};
+    const n = parseInt(e.key, 10);
+    if(!isNaN(n) && n>=1){
+      const tile = document.getElementById('tiles').children[n-1];
+      if(tile){ tile.querySelector('.play').click(); return; }
+    }
+    const matchIdx = bank.tiles.findIndex((t)=> String(t.hotkey||'').toLowerCase() === e.key.toLowerCase());
+    if(matchIdx >= 0){
+      const tiles = document.getElementById('tiles').children;
+      if(tiles[matchIdx]) tiles[matchIdx].querySelector('.play').click();
+    }
+  });
+});
+</script>
+</body>
+</html>
