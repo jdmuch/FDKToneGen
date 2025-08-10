@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>QCII Preset Panel — MCC7500 Style (Read-only)</title>
+  <title>TwoTone Board</title>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <script src="https://unpkg.com/tone"></script>
   <style>
@@ -72,24 +72,24 @@
     .toast{ position:fixed; right:14px; bottom:14px; background:#0f1316; color:#cfe6ff; border:1px solid #274562; padding:10px 12px; border-radius:10px; display:none; }
 
     .wav-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 10px;
-}
-.wav-buttons button {
-  padding: 6px 5px;
-  font-size: 12px;
-  background-color: #555;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  height: 50px;
-}
-.wav-buttons button:hover {
-  background-color: #777;
-}
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .wav-buttons button {
+      padding: 6px 5px;
+      font-size: 12px;
+      background-color: #555;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      height: 50px;
+    }
+    .wav-buttons button:hover {
+      background-color: #777;
+    }
   </style>
 </head>
 <body>
@@ -110,8 +110,7 @@
   <!-- Top Controls -->
   <div class="topbar">
     <div class="title">
-      <span>P25 TwoTone</span>
-      <span class="pill">Read-only</span>
+      <span>TwoTone</span>
     </div>
     <div class="controls">
       <div class="control">
@@ -159,10 +158,10 @@
         </div>
          <!-- RIGHT-SIDE FIXED AUDIO BUTTONS -->
          <div class="wav-buttons">
+          <button class="side-btn" onclick="playAnnounce('EMS.wav')">EMS</button>
+            <button class="side-btn" onclick="playAnnounce('FIRE.wav')">FIRE</button>
            <button class="side-btn" onclick="playAnnounce('BOX.wav')">BOX</button>
            <button class="side-btn" onclick="playAnnounce('EVAC.wav')">EVAC</button>
-           <button class="side-btn" onclick="playAnnounce('FIRE.wav')">FIRE</button>
-           <button class="side-btn" onclick="playAnnounce('EMS.wav')">EMS</button>
            <button class="side-btn" onclick="playAnnounce('Mayday.wav')">MAYDAY</button>
            <button class="side-btn" onclick="playAnnounce('RESCUE CANCEL.wav')">RESCUE CANCEL</button>
          </div>
@@ -443,9 +442,7 @@ function renderTiles(){
       <div class="order-badge">${selIdx >= 0 ? (selIdx+1) : ''}</div>
       <div class="left">
         <div class="label">${escapeHtml(p.label)}</div>
-        <div class="meta">
-          ${aText} Hz → ${bText} Hz &ensp;(1.0s / 1.0s) ${marriedHtml}
-        </div>
+        <div class="meta">${marriedHtml}</div>
       </div>
       <button class="btn primary play">Play</button>
     `;
