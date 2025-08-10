@@ -5,7 +5,7 @@
       "tiles": [
         { "label": "1 Fire",  "a": 358.9, "b": 398.1 },
         { "label": "2 Fire",  "a": 358.9, "b": 543.3 },
-        { "label": "3 Fire",  "a": 358.9, "b": 602.6 },
+        { "label": "3 Fire",  "a": 358.9, "b": 602.6, "marryTo": "Admin::3 Admin" },
         { "label": "4 Fire",  "a": 358.9, "b": 668.3 },
         { "label": "5 Fire",  "a": 358.9, "b": 741.3 },
         { "label": "6 Fire",  "a": 358.9, "b": 822.2 },
@@ -30,8 +30,8 @@
         { "label": "27 Fire", "a": 358.9, "b": 1430.5 },
         { "label": "28 Fire", "a": 358.9, "b": 312.6 },
         { "label": "29 Fire", "a": 358.9, "b": 346.7 },
-        { "label": "31 Fire", "a": 358.9, "b": 426.6 },
-        { "label": "33 Fire", "a": 358.9, "b": 524.8 },
+        { "label": "31 Fire", "a": 358.9, "b": 426.6, "marryTo": "Admin::3 Admin" },
+        { "label": "33 Fire", "a": 358.9, "b": 524.8, "marryTo": "Admin::3 Admin" },
         { "label": "40 Fire", "a": 358.9, "b": 1084.0 },
         { "label": "50 Fire", "a": 358.9, "b": 2610.0 },
         { "label": "51 Fire", "a": 358.9, "b": 794.3 }
